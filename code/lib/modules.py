@@ -21,8 +21,8 @@ from torch.utils.data.distributed import DistributedSampler
 from lib.utils import truncated_noise
 from lib.utils import mkdir_p, get_rank
 
-from lib.datasets import TextImgDataset as Dataset
-from lib.datasets import prepare_data, encode_tokens
+from lib.datasets_flower import TextImgDataset as Dataset
+from lib.datasets_flower import prepare_data, encode_tokens
 from models.inception import InceptionV3
 
 from torch.nn.functional import adaptive_avg_pool2d

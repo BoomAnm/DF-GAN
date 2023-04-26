@@ -5,7 +5,7 @@ import torch
 import torch.utils.data as data
 from torch.autograd import Variable
 import torchvision.transforms as transforms
-
+import json
 import os
 import sys
 import time
@@ -43,7 +43,7 @@ def get_fix_data(train_dl, test_dl, text_encoder, args):
 
 
 def prepare_data(data, text_encoder):
-    imgs, captions, caption_lens, keys = data
+    imgs, captions, caption_lens, class_ids, keys = data
     captions, sorted_cap_lens, sorted_cap_idxs = sort_sents(captions, caption_lens)
     sent_emb, words_embs = encode_tokens(text_encoder, captions, sorted_cap_lens)
     sent_emb = rm_sort(sent_emb, sorted_cap_idxs)
@@ -80,7 +80,8 @@ def rm_sort(caption, sorted_cap_idxs):
     return non_sort_cap
 
 
-def get_imgs(img_path, bbox=None, transform=None, normalize=None):
+def get_imgs(img_path, imsize, bbox=None,
+             transform=None, normalize=None):
     img = Image.open(img_path).convert('RGB')
     width, height = img.size
     if bbox is not None:
@@ -104,7 +105,7 @@ def get_imgs(img_path, bbox=None, transform=None, normalize=None):
 #                    Dataset
 ################################################################
 class TextImgDataset(data.Dataset):
-    def __init__(self, split='train', transform=None, args=None):
+    def __init__(self, split='train', base_size=64, transform=None, args=None):
         self.transform = transform
         self.word_num = args.TEXT.WORDS_NUM
         self.embeddings_num = args.TEXT.CAPTIONS_PER_IMAGE
@@ -114,6 +115,12 @@ class TextImgDataset(data.Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.split = split
+        self.imsize = []
+        for i in range(args.TREE.BRANCH_NUM):
+            self.imsize.append(base_size)
+            base_size = base_size * 2
+        self.data = []
+        self.data_dir = args.data_dir
 
         if self.data_dir.find('birds') != -1:
             self.bbox = self.load_bbox()
@@ -122,10 +129,17 @@ class TextImgDataset(data.Dataset):
         split_dir = os.path.join(self.data_dir, split)
 
         self.filenames, self.captions, self.ixtoword, \
-        self.wordtoix, self.n_words = self.load_text_data(self.data_dir, split)
+        self.wordtoix, self.n_words = self.load_text_data(args.data_dir, split)
+        self.dict_name2cap = {}
+        # ##修改后
+        # # img_filenames = self.filenames['img']
+        # self.class_id = self.load_class_id(split_dir, len(img_filenames))
+        # #修改前
+        # # self.class_id = self.load_class_id(split_dir, len(self.filenames['img']))
+        # self.number_example = len(self.filenames['img'])
 
-        self.class_id = self.load_class_id(split_dir, len(self.filenames))
-        self.number_example = len(self.filenames)
+        self.class_id = self.load_class_id(split_dir, len(self.filenames['img']))
+        self.number_example = len(self.filenames['img'])
 
     def load_bbox(self):
         data_dir = self.data_dir
@@ -152,10 +166,12 @@ class TextImgDataset(data.Dataset):
 
     def load_captions(self, data_dir, filenames):
         all_captions = []
-        for i in range(len(filenames)):
-            cap_path = '%s/text/%s.txt' % (data_dir, filenames[i])
+        for i in range(len(filenames['img'])):
+            cap_path = '%s/%s.txt' % (
+            'D:\\Users\\acer\\Desktop\\workspace\\DL\\DF-GAN\\data\\flower\\flower\\text', filenames['img'][i])
+            # cap_path =  +filenames['img'][i]
             with open(cap_path, "r") as f:
-                captions = f.read().encode('utf-8').decode('utf8').split('\n')
+                captions = f.read().split('\n')
                 cnt = 0
                 for cap in captions:
                     if len(cap) == 0:
@@ -167,8 +183,13 @@ class TextImgDataset(data.Dataset):
                     tokens = tokenizer.tokenize(cap.lower())
                     # print('tokens', tokens)
                     if len(tokens) == 0:
+                        cap = 'this flower'
+                        cap = cap.replace("\ufffd\ufffd", " ")
+                        tokenizer = RegexpTokenizer(r'\w+')
+                        tokens = tokenizer.tokenize(cap.lower())
+
                         print('cap', cap)
-                        continue
+                        # continue
 
                     tokens_new = []
                     for t in tokens:
@@ -181,7 +202,7 @@ class TextImgDataset(data.Dataset):
                         break
                 if cnt < self.embeddings_num:
                     print('ERROR: the captions for %s less than %d'
-                          % (filenames[i], cnt))
+                          % (filenames['img'][i], cnt))
         return all_captions
 
     def build_dictionary(self, train_captions, test_captions):
@@ -225,7 +246,8 @@ class TextImgDataset(data.Dataset):
                 ixtoword, wordtoix, len(ixtoword)]
 
     def load_text_data(self, data_dir, split):
-        filepath = os.path.join(data_dir, 'captions_DAMSM.pickle')
+        filepath = os.path.join(data_dir, 'captions.pickle')
+        # train_names = self.load_filenames(data_dir, 'train')
         train_names = self.load_filenames(data_dir, 'train')
         test_names = self.load_filenames(data_dir, 'test')
         if not os.path.isfile(filepath):
@@ -257,19 +279,23 @@ class TextImgDataset(data.Dataset):
         return filenames, captions, ixtoword, wordtoix, n_words
 
     def load_class_id(self, data_dir, total_num):
-        if os.path.isfile(data_dir + '/class_info.pickle'):
-            with open(data_dir + '/class_info.pickle', 'rb') as f:
-                class_id = pickle.load(f, encoding="bytes")
-        else:
-            class_id = np.arange(total_num)
-        return class_id
+        with open('D:\\Users\\acer\\Desktop\\workspace\\DL\\DF-GAN\\data\\cat_to_name.json', 'r') as f:
+            cat_to_name = json.load(f)
+        dic_class = []
+        dic_classs = {}
+        for key, value in cat_to_name.items():
+            dic_class.append(value)
+        for i in range(len(dic_class)):
+            dic_classs[dic_class[i]] = i
+
+        return dic_classs
 
     def load_filenames(self, data_dir, split):
-        filepath = '%s/%s/filenames.pickle' % (data_dir, split)
+        filepath = 'D:\\Users\\acer\\Desktop\\workspace\\DL\\DF-GAN\\data\\flower_cat_dic2.pkl'
         if os.path.isfile(filepath):
             with open(filepath, 'rb') as f:
                 filenames = pickle.load(f)
-            print('Load filenames from: %s (%d)' % (filepath, len(filenames)))
+            print('Load filenames from: %s (%d)' % (filepath, len(filenames['img'])))
         else:
             filenames = []
         return filenames
@@ -296,40 +322,22 @@ class TextImgDataset(data.Dataset):
 
     def __getitem__(self, index):
         #
-        key = self.filenames[index]
-        cls_id = self.class_id[index]
+        key = self.filenames['img'][index]
+        cat = self.filenames['cat'][index]
+        cls_id = self.class_id[cat]
         #
-        if self.bbox is not None:
-            bbox = self.bbox[key]
-            data_dir = '%s/CUB_200_2011' % self.data_dir
-        else:
-            bbox = None
-            data_dir = self.data_dir
-        #
-        if self.dataset_name.find('coco') != -1:
-            if self.split == 'train':
-                img_name = '%s/images/train2014/%s.jpg' % (data_dir, key)
-            else:
-                img_name = '%s/images/val2014/%s.jpg' % (data_dir, key)
-        elif self.dataset_name.find('flower') != -1:
-            if self.split == 'train':
-                img_name = '%s/oxford-102-flowers/images/%s.jpg' % (data_dir, key)
-            else:
-                img_name = '%s/oxford-102-flowers/images/%s.jpg' % (data_dir, key)
-        elif self.dataset_name.find('CelebA') != -1:
-            if self.split == 'train':
-                img_name = '%s/image/CelebA-HQ-img/%s.jpg' % (data_dir, key)
-            else:
-                img_name = '%s/image/CelebA-HQ-img/%s.jpg' % (data_dir, key)
-        else:
-            img_name = '%s/images/%s.jpg' % (data_dir, key)
+        bbox = None
 
-        imgs = get_imgs(img_name, bbox, self.transform, normalize=self.norm)
+        img_name = '%s/jpg/%s.jpg' % (self.data_dir, key)
+        imgs = get_imgs(img_name, self.imsize,
+                        bbox, self.transform, normalize=self.norm)
+
         # random select a sentence
         sent_ix = random.randint(0, self.embeddings_num)
         new_sent_ix = index * self.embeddings_num + sent_ix
         caps, cap_len = self.get_caption(new_sent_ix)
-        return imgs, caps, cap_len, key
+
+        return imgs, caps, cap_len, cls_id, key
 
     def __len__(self):
-        return len(self.filenames)
+        return len(self.filenames['img'])

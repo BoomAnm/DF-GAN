@@ -1,7 +1,7 @@
 CONFIG_NAME: flower
 
 dataset_name: flowers
-data_dir: ../data/flower
+data_dir: D:\Users\acer\Desktop\workspace\DL\DF-GAN\data\flower\flower
 
 gpu_id: 0
 imsize: 256
@@ -26,8 +26,12 @@ save_interval: 10
 truncation: True
 trunc_rate: 0.88
 
+TREE:
+    BRANCH_NUM: 1
+    BASE_SIZE: 256
+
 sample_times: 15
-npz_path: ../data/flower/npz/flower_val256_FIDK0.npz
+npz_path: D:\Users\acer\Desktop\workspace\DL\DF-GAN\data\npz\flower_256.npz
 example_captions: ./example_captions/flower.txt
 samples_save_dir: ./samples/flower/
 
@@ -35,4 +39,4 @@ TEXT:
     WORDS_NUM: 18
     EMBEDDING_DIM: 256
     CAPTIONS_PER_IMAGE: 10
-    DAMSM_NAME: ../data/flower/DAMSMencoder/text_encoder100.pth
+    DAMSM_NAME: D:\Users\acer\Desktop\workspace\DL\DF-GAN\DAMSM\text_encoder250.pth

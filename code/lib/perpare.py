@@ -23,6 +23,7 @@ from lib.utils import mkdir_p, get_rank, load_model_weights
 from models.DAMSM import RNN_ENCODER, CNN_ENCODER
 from models.GAN import NetG, NetD, NetC
 
+
 ###########   preparation   ############
 def prepare_models(args):
     device = args.device
@@ -54,14 +55,14 @@ def prepare_models(args):
     if (args.multi_gpus) and (args.train):
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         netG = torch.nn.parallel.DistributedDataParallel(netG, broadcast_buffers=False,
-                                                          device_ids=[local_rank],
-                                                          output_device=local_rank, find_unused_parameters=True)
+                                                         device_ids=[local_rank],
+                                                         output_device=local_rank, find_unused_parameters=True)
         netD = torch.nn.parallel.DistributedDataParallel(netD, broadcast_buffers=False,
-                                                          device_ids=[local_rank],
-                                                          output_device=local_rank, find_unused_parameters=True)
+                                                         device_ids=[local_rank],
+                                                         output_device=local_rank, find_unused_parameters=True)
         netC = torch.nn.parallel.DistributedDataParallel(netC, broadcast_buffers=False,
-                                                          device_ids=[local_rank],
-                                                          output_device=local_rank, find_unused_parameters=True)
+                                                         device_ids=[local_rank],
+                                                         output_device=local_rank, find_unused_parameters=True)
     return image_encoder, text_encoder, netG, netD, netC
 
 
@@ -80,7 +81,7 @@ def prepare_dataset(args, split, transform):
             transforms.RandomCrop(imsize),
             transforms.RandomHorizontalFlip()])
     # train dataset
-    from lib.datasets import TextImgDataset as Dataset
+    from lib.datasets_flower import TextImgDataset as Dataset
     dataset = Dataset(split=split, transform=image_transform, args=args)
     return dataset
 
@@ -98,7 +99,7 @@ def prepare_dataloaders(args, transform=None):
     num_workers = args.num_workers
     train_dataset, valid_dataset = prepare_datasets(args, transform)
     # train dataloader
-    if args.multi_gpus==True:
+    if args.multi_gpus == True:
         train_sampler = DistributedSampler(train_dataset)
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset, batch_size=batch_size, drop_last=True,
@@ -109,7 +110,7 @@ def prepare_dataloaders(args, transform=None):
             train_dataset, batch_size=batch_size, drop_last=True,
             num_workers=num_workers, shuffle='True')
     # valid dataloader
-    if args.multi_gpus==True:
+    if args.multi_gpus == True:
         valid_sampler = DistributedSampler(valid_dataset)
         valid_dataloader = torch.utils.data.DataLoader(
             valid_dataset, batch_size=batch_size, drop_last=True,
@@ -119,5 +120,4 @@ def prepare_dataloaders(args, transform=None):
             valid_dataset, batch_size=batch_size, drop_last=True,
             num_workers=num_workers, shuffle='True')
     return train_dataloader, valid_dataloader, \
-            train_dataset, valid_dataset, train_sampler
-
+           train_dataset, valid_dataset, train_sampler
