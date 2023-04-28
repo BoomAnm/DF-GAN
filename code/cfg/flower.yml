@@ -13,7 +13,7 @@ cuda: True
 stamp: 'normal'
 state_epoch: 100
 max_epoch: 1001
-batch_size: 32
+batch_size: 16
 nf: 32
 ch_size: 3
 

@@ -43,7 +43,8 @@ def get_fix_data(train_dl, test_dl, text_encoder, args):
 
 
 def prepare_data(data, text_encoder):
-    imgs, captions, caption_lens, keys = data
+    # imgs, captions, caption_lens, keys = datasa
+    imgs, captions, caption_lens, class_ids, keys = data
     captions, sorted_cap_lens, sorted_cap_idxs = sort_sents(captions, caption_lens)
     sent_emb, words_embs = encode_tokens(text_encoder, captions, sorted_cap_lens)
     sent_emb = rm_sort(sent_emb, sorted_cap_idxs)

@@ -21,22 +21,23 @@ from lib.utils import mkdir_p, get_rank, merge_args_yaml, get_time_stamp
 from lib.utils import load_netG, load_npz
 from lib.perpare import prepare_dataloaders, prepare_models
 from lib.modules import eval
-
+from lib.modules import sample_one_batch as sample, test as test, train as train
 
 def parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='DF-GAN')
-    parser.add_argument('--cfg', dest='cfg_file', type=str, default='./cfg/model/coco.yml',
+    parser.add_argument('--cfg', dest='cfg_file', type=str, default='D:\\Users\\acer\\Desktop\\workspace\\DL\\DF-GAN'
+                                                                    '\\code\\cfg\\bird.yml',
                         help='optional config file')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='number of workers(default: 4)')
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=26,
                         help='batch size')
     parser.add_argument('--train', type=bool, default=False,
                         help='if train model')
     parser.add_argument('--multi_gpus', type=bool, default=False,
                         help='if use multi-gpu')
-    parser.add_argument('--gpu_id', type=int, default=1,
+    parser.add_argument('--gpu_id', type=int, default=0,
                         help='gpu id')
     parser.add_argument('--local_rank', default=-1, type=int,
                         help='node rank for distributed training')
@@ -73,7 +74,10 @@ def main(args):
     start_t = time.time()
     m1, s1 = load_npz(args.npz_path)
     with torch.no_grad():
-        fid = eval(valid_dl, text_encoder, netG, args.device, m1, s1, args.save_image, args.val_save_dir, \
+        # fid = eval(valid_dl, text_encoder, netG, args.device, m1, s1, args.save_image, args.val_save_dir, \
+        #            args.sample_times, args.z_dim, args.batch_size, args.truncation, args.trunc_rate)
+
+        fid = test(valid_dl, text_encoder, netG, args.device, m1, s1, epoch, args.max_epoch, \
                    args.sample_times, args.z_dim, args.batch_size, args.truncation, args.trunc_rate)
     end_t = time.time()
     if (multi_gpus == True) and (get_rank() != 0):

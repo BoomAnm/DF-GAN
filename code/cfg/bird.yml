@@ -1,7 +1,7 @@
 CONFIG_NAME: bird
 
 dataset_name: birds
-data_dir: ../data/birds
+data_dir: D:\Users\acer\Desktop\workspace\DL\DF-GAN\data\birds
 
 gpu_id: 0
 imsize: 256
@@ -27,10 +27,10 @@ truncation: True
 trunc_rate: 0.88
 
 sample_times: 10
-npz_path: ../data/birds/npz/bird_val256_FIDK0.npz
+npz_path: D:\Users\acer\Desktop\workspace\DL\DF-GAN\data\birds\npz\bird_val256_FIDK0.npz
 example_captions: ./example_captions/bird.txt
 samples_save_dir: ./samples/bird/
-checkpoint: ./saved_models/bird/pretrained/state_epoch_1220.pth
+checkpoint: D:\Users\acer\Desktop\workspace\DL\DF-GAN\code\saved_models\bird\pretrained\state_epoch_1220.pth
 
 save_image: False
 val_save_dir: ./vals/bird/
@@ -39,4 +39,4 @@ TEXT:
     WORDS_NUM: 18
     EMBEDDING_DIM: 256
     CAPTIONS_PER_IMAGE: 10
-    DAMSM_NAME: ../data/birds/DAMSMencoder/text_encoder200.pth
+    DAMSM_NAME: D:\Users\acer\Desktop\workspace\DL\DF-GAN\data\birds\DAMSMencoder\text_encoder200.pth
